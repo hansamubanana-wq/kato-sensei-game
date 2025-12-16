@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>加藤先生 育成ゲーム</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; background-color: #f0f0f0; padding: 20px; }
+        .game-container { background: white; max-width: 400px; margin: 0 auto; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        h1 { color: #333; }
+        .status-box { text-align: left; margin: 20px 0; padding: 10px; background: #eef; border-radius: 5px; }
+        .buttons button { display: block; width: 100%; margin: 10px 0; padding: 10px; font-size: 16px; cursor: pointer; }
+        #message { height: 60px; color: #d32f2f; font-weight: bold; margin-top: 10px; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+<div class="game-container">
+    <h1>加藤先生<br>育成ゲーム</h1>
+    <div id="character" style="font-size: 50px;">👨‍🏫</div>
+    <div class="status-box">
+        <p>☕ カフェイン: <span id="caffeine">50</span>/100</p>
+        <p>🔥 やる気: <span id="motivation">50</span>/100</p>
+        <p>❤️ 体力: <span id="energy">50</span>/100</p>
+    </div>
+    <div id="message">先生の様子を見てみよう...</div>
+    <div class="buttons" id="action-buttons">
+        <button onclick="giveCoffee()">☕ 缶コーヒーを渡す</button>
+        <button onclick="askQuestion()">🙋 質問攻めにする</button>
+        <button onclick="sleep()">💤 職員室で寝かせる</button>
+    </div>
+    <button id="reset-btn" class="hidden" onclick="location.reload()">もう一度遊ぶ</button>
+</div>
+<script>
+    let caffeine = 50; let motivation = 50; let energy = 50; let isAlive = true;
+    function updateStatus() {
+        if (!isAlive) return;
+        document.getElementById('caffeine').innerText = caffeine;
+        document.getElementById('motivation').innerText = motivation;
+        document.getElementById('energy').innerText = energy;
+        if (energy <= 0 || caffeine <= 0) {
+            isAlive = false;
+            document.getElementById('message').innerText = "😱 加藤先生は早退しました...";
+            document.getElementById('character').innerText = "🛌";
+            document.getElementById('action-buttons').classList.add('hidden');
+            document.getElementById('reset-btn').classList.remove('hidden');
+        }
+    }
+    function giveCoffee() { if(!isAlive)return; caffeine += 20; motivation += 5; limitCheck(); document.getElementById('message').innerText = "「うむ、目が覚めたぞ。」"; updateStatus(); }
+    function askQuestion() { if(!isAlive)return; motivation += 15; energy -= 10; caffeine -= 5; limitCheck(); document.getElementById('message').innerText = "「いい質問だ！熱心だな。」"; updateStatus(); }
+    function sleep() { if(!isAlive)return; energy += 30; caffeine -= 10; limitCheck(); document.getElementById('message').innerText = "「スピー...（チャイムで起床）」"; updateStatus(); }
+    function limitCheck() { if(caffeine>100)caffeine=100; if(motivation>100)motivation=100; if(energy>100)energy=100; }
+    setInterval(() => { if (isAlive) { caffeine -= 2; energy -= 2; limitCheck(); updateStatus(); } }, 3000);
+</script>
+</body>
+</html>

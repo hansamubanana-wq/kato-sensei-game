@@ -3,155 +3,254 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>加藤先生 育成ゲームDX</title>
+    <title>加藤先生っち</title>
+    <link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
     <style>
-        body { font-family: "Helvetica Neue", Arial, sans-serif; text-align: center; background-color: #ffd1dc; padding: 20px; }
-        .game-container { background: white; max-width: 400px; margin: 0 auto; padding: 20px; border-radius: 20px; box-shadow: 0 8px 16px rgba(0,0,0,0.2); border: 5px solid #ff9eb5; }
-        h1 { color: #d63384; font-size: 24px; }
-        #character-area { position: relative; height: 150px; display: flex; align-items: center; justify-content: center; }
-        #character { font-size: 80px; transition: transform 0.2s; }
-        .poop { position: absolute; font-size: 30px; bottom: 10px; right: 20px; animation: bounce 1s infinite; }
-        
-        .status-box { text-align: left; margin: 20px 0; padding: 15px; background: #fff0f5; border-radius: 10px; font-weight: bold; }
-        .buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .buttons button { padding: 12px; font-size: 14px; cursor: pointer; background: #ff9eb5; border: none; border-radius: 8px; color: white; font-weight: bold; }
-        .buttons button:active { transform: scale(0.95); }
-        .clean-btn { grid-column: span 2; background: #88ccff !important; }
-        
-        #message { height: 50px; color: #333; margin-top: 10px; font-size: 14px; }
-        .hidden { display: none; }
+        body {
+            font-family: 'DotGothic16', sans-serif;
+            background-color: #f0f8ff;
+            text-align: center;
+            user-select: none; /* スマホでの長押し選択防止 */
+        }
+        .tamagotchi-shell {
+            background-color: #ffeb3b; /* 本体の色 */
+            width: 320px;
+            margin: 20px auto;
+            padding: 30px 20px;
+            border-radius: 50% 50% 40% 40%; /* たまご型 */
+            border: 8px solid #fbc02d;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+        .screen {
+            background-color: #efffde; /* 液晶っぽい緑 */
+            border: 4px solid #888;
+            border-radius: 10px;
+            height: 200px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.1);
+        }
+        /* ステータス表示 */
+        .stats-bar {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px;
+            font-size: 14px;
+            color: #555;
+        }
+        /* キャラクターエリア */
+        #character-area {
+            height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 60px;
+            position: relative;
+        }
+        /* アニメーション */
+        .bounce { animation: bounce 1s infinite; }
         @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        
+        /* うんち */
+        .poop {
+            position: absolute;
+            font-size: 24px;
+            bottom: 10px;
+            right: 20px;
+        }
+
+        /* ボタン群 */
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        button {
+            background: #fff;
+            border: 4px solid #555;
+            border-radius: 20px;
+            padding: 10px;
+            font-family: 'DotGothic16', sans-serif;
+            font-size: 16px;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #888;
+        }
+        button:active {
+            transform: translateY(4px);
+            box-shadow: none;
+        }
+        .msg { height: 20px; margin-top: 5px; color: #008080; font-size: 14px; }
+        .hidden { display: none; }
     </style>
 </head>
 <body>
 
-<div class="game-container">
-    <h1>加藤先生 育成ゲーム DX</h1>
-    <p>勤続: <span id="age">1</span>日目 <span id="rank-name">（新任）</span></p>
+<div class="tamagotchi-shell">
+    <h2>加藤先生っち</h2>
     
-    <div id="character-area">
-        <div id="character">👨‍🏫</div>
-        <div id="poops"></div> </div>
-    
-    <div class="status-box">
-        <p>☕ カフェイン: <span id="caffeine">50</span>/100</p>
-        <p>🔥 やる気: <span id="motivation">50</span>/100</p>
-        <p>❤️ 体力: <span id="energy">50</span>/100</p>
+    <div class="screen">
+        <div class="stats-bar">
+            <span>年齢:<span id="age">0</span>才</span>
+            <span>満腹:<span id="hunger">❤❤❤❤</span></span>
+            <span>機嫌:<span id="happy">❤❤❤❤</span></span>
+        </div>
+
+        <div id="character-area">
+            <div id="character" class="bounce">🥚</div>
+            <div id="poops"></div>
+        </div>
+        
+        <div id="message" class="msg"></div>
     </div>
 
-    <div id="message">テスト期間が始まった...</div>
-
-    <div class="buttons" id="action-buttons">
-        <button onclick="giveCoffee()">☕ コーヒー</button>
-        <button onclick="askQuestion()">🙋 質問する</button>
-        <button onclick="sleep()">💤 休ませる</button>
-        <button onclick="playGame()">🎮 ゲームの話</button>
-        <button onclick="clean()" class="clean-btn">🧹 採点を手伝う (0)</button>
+    <div class="controls" id="game-buttons">
+        <button onclick="feed()">🍚 ごはん</button>
+        <button onclick="snack()">🍩 おやつ</button>
+        <button onclick="play()">⚽ あそぶ</button>
+        <button onclick="clean()">🚽 トイレ</button>
     </div>
 
-    <button id="reset-btn" class="hidden" style="width:100%; padding:15px; margin-top:20px;" onclick="location.reload()">再雇用（リセット）</button>
+    <button id="reset-btn" class="hidden" style="margin-top:20px; width:100%;" onclick="location.reload()">新しい卵を育てる</button>
 </div>
 
 <script>
-    let caffeine = 50;
-    let motivation = 50;
-    let energy = 50;
-    let age = 1;
-    let poopCount = 0; // 未採点の数
+    // --- ゲームの設定 ---
+    let hunger = 4; // 満腹度 (最大4)
+    let happy = 4;  // ご機嫌 (最大4)
+    let age = 0;    // 年齢
+    let poopCount = 0; // うんちの数
     let isAlive = true;
-    let rank = "新任";
+    let character = "🥚"; // 現在の見た目
 
-    function updateStatus() {
-        if (!isAlive) return;
-
-        // 画面更新
-        document.getElementById('caffeine').innerText = Math.floor(caffeine);
-        document.getElementById('motivation').innerText = Math.floor(motivation);
-        document.getElementById('energy').innerText = Math.floor(energy);
-        document.getElementById('age').innerText = age;
-        
-        // 進化判定
-        if (age >= 10 && motivation > 80) { rank = "校長"; document.getElementById('character').innerText = "🤴"; }
-        else if (age >= 5 && motivation > 60) { rank = "学年主任"; document.getElementById('character').innerText = "🤵"; }
-        else { rank = "新任"; document.getElementById('character').innerText = "👨‍🏫"; }
-        document.getElementById('rank-name').innerText = `（${rank}）`;
-
-        // 採点ボタンの表示更新
-        document.querySelector('.clean-btn').innerText = `🧹 採点を手伝う (${poopCount})`;
-
-        // ゲームオーバー判定
-        if (energy <= 0 || caffeine <= 0 || poopCount >= 4) {
-            gameOver();
-        }
-    }
-
-    function giveCoffee() { action(20, 5, 0, "「うむ、目が覚めた。」"); }
-    function askQuestion() { action(-5, 10, -10, "「いい質問だ！」"); }
-    function sleep() { action(-10, 0, 30, "「スピー...」"); }
-    function playGame() { action(-5, 15, -5, "「Astro Botか...悪くないな。」"); }
-
-    function action(caf, mot, ene, msg) {
-        if (!isAlive) return;
-        caffeine += caf; motivation += mot; energy += ene;
-        limitCheck();
-        document.getElementById('message').innerText = msg;
-        updateStatus();
-    }
-
-    // 掃除（採点）コマンド
-    function clean() {
-        if (!isAlive || poopCount === 0) return;
-        poopCount = 0;
-        document.getElementById('poops').innerHTML = "";
-        document.getElementById('message').innerText = "採点が終わってスッキリ！";
-        motivation += 5;
-        updateStatus();
-    }
-
-    function limitCheck() {
-        caffeine = Math.max(0, Math.min(100, caffeine));
-        motivation = Math.max(0, Math.min(100, motivation));
-        energy = Math.max(0, Math.min(100, energy));
-    }
-
-    function gameOver() {
-        isAlive = false;
-        let cause = "";
-        if (poopCount >= 4) cause = "未採点の山に埋もれて";
-        else if (caffeine <= 0) cause = "カフェイン切れで";
-        else cause = "過労で";
-        
-        document.getElementById('message').innerText = `😱 加藤先生は${cause}倒れました...`;
-        document.getElementById('character').innerText = "👻";
-        document.getElementById('action-buttons').classList.add('hidden');
-        document.getElementById('reset-btn').classList.remove('hidden');
-    }
-
-    // 時間経過ループ（1秒ごと）
+    // --- メインループ (1秒ごとに実行) ---
     setInterval(() => {
-        if (isAlive) {
-            caffeine -= 1; energy -= 1;
-            
-            // 確率で未採点（うんち）発生
-            if (Math.random() < 0.1) { 
-                poopCount++;
-                let p = document.createElement("div");
-                p.className = "poop";
-                p.innerText = "📄"; // テスト用紙
-                p.style.right = (Math.random() * 80) + "px"; // ランダムな位置
-                document.getElementById('poops').appendChild(p);
-                document.getElementById('message').innerText = "未採点のテストが発生！";
-            }
+        if (!isAlive) return;
 
-            // 30秒ごとに1日経過（年齢）
-            if (new Date().getSeconds() % 30 === 0) { age++; }
-
-            limitCheck();
-            updateStatus();
+        // 確率でお腹が減る
+        if (Math.random() < 0.2) hunger--;
+        // 確率で機嫌が悪くなる
+        if (Math.random() < 0.2) happy--;
+        // 確率でうんちをする
+        if (Math.random() < 0.15) makePoop();
+        
+        // 30秒で1歳年を取る（進化判定）
+        if (new Date().getSeconds() % 30 === 0) {
+            age++;
+            evolve();
         }
+
+        checkStatus();
+        updateScreen();
     }, 1000);
 
-    updateStatus();
+    // --- アクション ---
+    function feed() {
+        if (!isAlive) return;
+        if (hunger < 4) {
+            hunger++;
+            msg("もぐもぐ...");
+            updateScreen();
+        } else {
+            msg("おなかいっぱい！");
+        }
+    }
+
+    function snack() {
+        if (!isAlive) return;
+        if (happy < 4) {
+            happy++;
+            hunger = Math.max(0, hunger - 1); // おやつはお腹にはたまらない
+            msg("おいしい！");
+            updateScreen();
+        }
+    }
+
+    function play() {
+        if (!isAlive) return;
+        if (happy < 4) {
+            happy++;
+            hunger--; // 遊ぶとお腹が減る
+            msg("たのしいな！");
+            updateScreen();
+        }
+    }
+
+    function clean() {
+        if (!isAlive) return;
+        if (poopCount > 0) {
+            poopCount = 0;
+            happy++;
+            msg("スッキリした！");
+            updateScreen();
+        } else {
+            msg("汚れてないよ");
+        }
+    }
+
+    function makePoop() {
+        if (poopCount < 4) {
+            poopCount++;
+            msg("ぷりっ");
+        }
+    }
+
+    // --- 進化システム ---
+    function evolve() {
+        if (age < 3) character = "👶";       // ベビ加藤
+        else if (age < 6) character = "👦";  // キッズ加藤
+        else character = "👨‍🏫";             // 加藤先生
+    }
+
+    // --- 状態チェック ---
+    function checkStatus() {
+        // 上限下限の調整
+        hunger = Math.max(0, Math.min(4, hunger));
+        happy = Math.max(0, Math.min(4, happy));
+
+        // ゲームオーバー判定 (空腹0 または うんちまみれ)
+        if (hunger === 0 || poopCount >= 4) {
+            isAlive = false;
+            character = "👻";
+            msg("さようなら...");
+            document.getElementById("game-buttons").classList.add("hidden");
+            document.getElementById("reset-btn").classList.remove("hidden");
+        }
+    }
+
+    // --- 画面描画 ---
+    function updateScreen() {
+        // ハート表示の更新
+        document.getElementById("hunger").innerText = "❤".repeat(hunger) + "♡".repeat(4 - hunger);
+        document.getElementById("happy").innerText = "❤".repeat(happy) + "♡".repeat(4 - happy);
+        document.getElementById("age").innerText = age;
+        
+        // キャラクター更新
+        document.getElementById("character").innerText = character;
+
+        // うんち描画
+        const poopArea = document.getElementById("poops");
+        poopArea.innerHTML = "";
+        for(let i=0; i<poopCount; i++) {
+            let p = document.createElement("div");
+            p.className = "poop";
+            p.innerText = "💩";
+            p.style.right = (i * 25 + 10) + "px"; // 並べて表示
+            poopArea.appendChild(p);
+        }
+    }
+
+    function msg(text) {
+        document.getElementById("message").innerText = text;
+        setTimeout(() => {
+            document.getElementById("message").innerText = "";
+        }, 2000);
+    }
+    
+    // 初期化
+    evolve();
+    updateScreen();
+
 </script>
 </body>
 </html>

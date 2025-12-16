@@ -8,9 +8,8 @@
     <style>
         body { font-family: 'DotGothic16', sans-serif; background-color: #e0f7fa; text-align: center; user-select: none; }
         
-        /* 本体デザイン */
         .tamagotchi-shell {
-            background: linear-gradient(135deg, #4dd0e1, #00acc1);
+            background: linear-gradient(135deg, #26c6da, #0097a7);
             width: 340px; margin: 10px auto; padding: 30px 20px;
             border-radius: 60% 60% 50% 50%;
             border: 8px solid #006064;
@@ -18,7 +17,6 @@
             position: relative;
         }
 
-        /* 画面デザイン */
         .screen {
             background-color: #f1f8e9;
             border: 6px solid #546e7a;
@@ -29,10 +27,10 @@
             box-shadow: inset 0 0 15px rgba(0,0,0,0.1);
         }
 
-        /* レア度ごとの背景色変化 */
+        /* レア度背景 */
         .bg-normal { background-color: #f1f8e9; }
-        .bg-rare { background-color: #fff9c4; } /* 金 */
-        .bg-legend { background-color: #e1bee7; } /* 紫 */
+        .bg-rare { background-color: #fff9c4; } 
+        .bg-legend { background-color: #e1bee7; } 
 
         .top-bar { display: flex; justify-content: space-between; padding: 5px 10px; font-size: 14px; color: #455a64; font-weight: bold; }
         
@@ -42,7 +40,6 @@
 
         .poop { position: absolute; font-size: 24px; bottom: 10px; right: 20px; }
 
-        /* ボタン */
         .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 20px; }
         button {
             background: #fff; border: 3px solid #006064; border-radius: 15px; padding: 8px;
@@ -51,12 +48,19 @@
         }
         button:active { transform: translateY(3px); box-shadow: none; }
         
-        /* 特別なボタン */
-        .share-btn { grid-column: span 2; background-color: #ffeb3b; border-color: #fbc02d; color: #333; }
-        .code-input { width: 70%; padding: 5px; margin-top: 10px; font-family: inherit; }
-
+        /* 特別なボタン色 */
+        .gift-btn { grid-column: span 2; background-color: #ff80ab; color: white; border-color: #c51162; }
+        
+        /* ギフト受信モーダル */
+        #gift-modal {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8); color: white;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 100;
+        }
+        
         #message { height: 20px; color: #d81b60; font-size: 14px; margin-top: 5px; font-weight: bold; }
-        .hidden { display: none; }
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
@@ -79,6 +83,13 @@
         </div>
         
         <div id="message"></div>
+
+        <div id="gift-modal" class="hidden">
+            <h3 style="margin:0; font-size:40px;">🎁</h3>
+            <p>友達から<br><span id="gift-name" style="color:yellow; font-weight:bold;">レアな卵</span><br>が届きました！</p>
+            <button onclick="acceptGift()" style="background:#ffeb3b; color:black; width:80%;">育てる！</button>
+            <button onclick="closeGift()" style="background:#888; color:white; width:80%; margin-top:10px;">受け取らない</button>
+        </div>
     </div>
 
     <div class="controls" id="game-buttons">
@@ -86,144 +97,135 @@
         <button onclick="snack()">🍰 おやつ</button>
         <button onclick="play()">⚽ あそぶ</button>
         <button onclick="clean()">🚽 トイレ</button>
-        <button onclick="shareStatus()" class="share-btn">📢 友達に自慢する</button>
+        <button onclick="createGiftLink()" class="gift-btn">🎁 卵を友達に送る</button>
     </div>
 
     <div id="reset-area" class="hidden" style="margin-top:20px;">
-        <p>次の世代へ引き継ぎますか？</p>
-        <input type="text" id="secret-code" class="code-input" placeholder="あいことばがあれば入力">
-        <button onclick="resetGame()" style="width:100%; margin-top:10px; background:#81c784;">🥚 新しい卵を産む</button>
+        <button onclick="resetGame()" style="width:100%; background:#81c784;">🥚 次の世代へ</button>
     </div>
 </div>
 
 <script>
-    // --- セーブデータ読み込み ---
+    // --- データ読み込み ---
     let generation = parseInt(localStorage.getItem('kato_gen')) || 1;
-    let rarity = localStorage.getItem('kato_rarity') || 'normal'; // normal, rare, legend
+    let rarity = localStorage.getItem('kato_rarity') || 'normal'; 
+    
+    // URLからギフトがあるかチェック
+    const urlParams = new URLSearchParams(window.location.search);
+    const giftRarity = urlParams.get('gift');
 
-    // --- ゲーム設定 ---
-    let hunger = 4;
-    let happy = 4;
-    let age = 0;
-    let poopCount = 0;
+    let hunger = 4, happy = 4, age = 0, poopCount = 0;
     let isAlive = true;
     let character = "🥚";
-    
-    // レア度ごとの設定（色とマーク）
+
     const rarityConfig = {
-        'normal': { star: '★', bg: 'bg-normal', color: '#000' },
-        'rare':   { star: '★★', bg: 'bg-rare', color: '#d81b60' },   // レアは赤っぽい
-        'legend': { star: '★★★', bg: 'bg-legend', color: '#6a1b9a' } // レジェンドは紫
+        'normal': { star: '★', bg: 'bg-normal', name: '普通の卵' },
+        'rare':   { star: '★★', bg: 'bg-rare', name: '金の卵' },
+        'legend': { star: '★★★', bg: 'bg-legend', name: '伝説の卵' }
     };
 
-    // 初期化処理
+    // --- 初期化 ---
     function init() {
-        // 背景色とスターを設定
-        const config = rarityConfig[rarity];
-        document.getElementById('screen-bg').className = `screen ${config.bg}`;
-        document.getElementById('rarity-star').innerText = config.star;
-        document.getElementById('character').style.color = config.color;
-        document.getElementById('generation').innerText = generation;
-        
+        applyRarityStyle();
         evolve();
         updateScreen();
+
+        // もしギフトURL経由なら、受信画面を表示
+        if (giftRarity && rarityConfig[giftRarity]) {
+            document.getElementById('gift-modal').classList.remove('hidden');
+            document.getElementById('gift-name').innerText = rarityConfig[giftRarity].name;
+        }
     }
 
     // --- メインループ ---
     setInterval(() => {
         if (!isAlive) return;
-
         if (Math.random() < 0.2) hunger--;
         if (Math.random() < 0.2) happy--;
         if (Math.random() < 0.15) makePoop();
-        
-        // 10秒で1歳（テスト用に高速化）
-        if (new Date().getSeconds() % 10 === 0) {
-            age++;
-            evolve();
-        }
+        if (new Date().getSeconds() % 10 === 0) { age++; evolve(); } // 10秒で加齢
         checkStatus();
         updateScreen();
     }, 1000);
 
-    // --- アクション ---
+    // --- アクション系 ---
     function feed() { action(() => { if(hunger<4) { hunger++; msg("うま！"); } else msg("満腹だ"); }); }
     function snack() { action(() => { if(happy<4) { happy++; hunger=Math.max(0,hunger-1); msg("あま〜い"); } }); }
     function play() { action(() => { if(happy<4) { happy++; hunger--; msg("ウェーイ！"); } }); }
     function clean() { action(() => { if(poopCount>0) { poopCount=0; happy++; msg("スッキリ！"); } else msg("きれいだよ"); }); }
-    
-    function action(func) {
-        if (!isAlive) return;
-        func();
-        updateScreen();
-    }
-
     function makePoop() { if (poopCount < 4) { poopCount++; msg("ブリッ"); } }
+    
+    function action(func) { if (!isAlive) return; func(); updateScreen(); }
 
-    // --- 進化＆レア度分岐 ---
+    // --- 進化・レア度 ---
     function evolve() {
-        // レア度によって見た目が変わる
-        if (age < 5) {
-            character = rarity === 'legend' ? "🐉" : (rarity === 'rare' ? "🐣" : "🥚");
-        } else if (age < 15) {
-            character = rarity === 'legend' ? "👽" : (rarity === 'rare' ? "😎" : "👦");
-        } else {
-            // 大人
-            if (rarity === 'legend') character = "🧞‍♂️"; // 魔人加藤
-            else if (rarity === 'rare') character = "🤴"; // 王子加藤
-            else character = "👨‍🏫"; // 普通の加藤
+        if (age < 5) character = rarity === 'legend' ? "🐉" : (rarity === 'rare' ? "🐣" : "🥚");
+        else if (age < 15) character = rarity === 'legend' ? "👽" : (rarity === 'rare' ? "😎" : "👦");
+        else {
+            if (rarity === 'legend') character = "🧞‍♂️"; 
+            else if (rarity === 'rare') character = "🤴"; 
+            else character = "👨‍🏫"; 
         }
     }
 
     function checkStatus() {
         hunger = Math.max(0, Math.min(4, hunger));
         happy = Math.max(0, Math.min(4, happy));
-
-        // ゲームオーバー（家出 or 結婚引退）
-        if (hunger === 0 || poopCount >= 4) {
-            endGame("家出しました...", "🏃💨");
-        } else if (age >= 30) {
-            endGame("結婚して引退！", "💒"); // ハッピーエンド
-        }
+        if (hunger === 0 || poopCount >= 4) endGame("家出しました...", "🏃💨");
+        else if (age >= 30) endGame("結婚して引退！", "💒");
     }
 
     function endGame(text, icon) {
-        isAlive = false;
-        msg(text);
-        character = icon;
+        isAlive = false; msg(text); character = icon;
         document.getElementById("game-buttons").classList.add("hidden");
         document.getElementById("reset-area").classList.remove("hidden");
     }
 
-    // --- 世代交代＆あいことばシステム ---
     function resetGame() {
-        const code = document.getElementById('secret-code').value;
+        // 次の世代はランダム（通常プレイ時）
         let nextRarity = 'normal';
+        if (Math.random() < 0.05) nextRarity = 'legend';
+        else if (Math.random() < 0.2) nextRarity = 'rare';
 
-        // あいことば判定（ここを友達と共有！）
-        if (code === "KATO-GOD") nextRarity = 'legend';
-        else if (code === "KATO-LOVE") nextRarity = 'rare';
-        else {
-            // ランダム抽選
-            const rand = Math.random();
-            if (rand < 0.05) nextRarity = 'legend'; // 5%
-            else if (rand < 0.2) nextRarity = 'rare'; // 15%
-        }
-
-        // データを保存してリロード
         localStorage.setItem('kato_gen', generation + 1);
         localStorage.setItem('kato_rarity', nextRarity);
-        location.reload();
+        // URLのギフトパラメータを消してリロード
+        window.location.href = window.location.pathname;
     }
 
-    // --- シェア機能（SNSで自慢） ---
-    function shareStatus() {
-        const text = `【加藤先生っち】\n現在は${generation}代目！\nレア度: ${rarityConfig[rarity].star}\n年齢: ${age}才\n加藤先生を育成中！\n#加藤先生っち`;
+    // --- ★ここが新機能：ギフトシステム ---
+
+    // 1. 友達に送るURLを作る
+    function createGiftLink() {
+        // 今の自分のレア度をURLにする
+        const currentUrl = window.location.href.split('?')[0]; // 現在のURL（?以降カット）
+        const giftUrl = `${currentUrl}?gift=${rarity}`;
         
         // クリップボードにコピー
-        navigator.clipboard.writeText(text).then(() => {
-            alert("ステータスをコピーしました！\nLINEやXに貼り付けて自慢しよう！");
+        navigator.clipboard.writeText(giftUrl).then(() => {
+            alert(`🎁 卵のURLをコピーしました！\n\n${giftUrl}\n\nLINEで友達に送ってあげてね！`);
         });
+    }
+
+    // 2. ギフトを受け取る
+    function acceptGift() {
+        // 今のデータを上書きして、そのレア度でスタート
+        localStorage.setItem('kato_gen', 1); // もらうと1代目から
+        localStorage.setItem('kato_rarity', giftRarity);
+        
+        // URLの ?gift=... を消してリロード（綺麗なURLにする）
+        window.location.href = window.location.pathname;
+    }
+
+    function closeGift() {
+        document.getElementById('gift-modal').classList.add('hidden');
+    }
+
+    // --- 画面更新 ---
+    function applyRarityStyle() {
+        const config = rarityConfig[rarity];
+        document.getElementById('screen-bg').className = `screen ${config.bg}`;
+        document.getElementById('rarity-star').innerText = config.star;
     }
 
     function updateScreen() {
@@ -231,15 +233,11 @@
         document.getElementById("happy").innerText = "❤".repeat(happy) + "♡".repeat(4 - happy);
         document.getElementById("age").innerText = age;
         document.getElementById("character").innerText = character;
-
         const poopArea = document.getElementById("poops");
         poopArea.innerHTML = "";
         for(let i=0; i<poopCount; i++) {
-            let p = document.createElement("div");
-            p.className = "poop";
-            p.innerText = "💩";
-            p.style.right = (i * 25 + 5) + "px";
-            poopArea.appendChild(p);
+            let p = document.createElement("div"); p.className = "poop"; p.innerText = "💩";
+            p.style.right = (i * 25 + 5) + "px"; poopArea.appendChild(p);
         }
     }
 

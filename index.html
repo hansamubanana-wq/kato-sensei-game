@@ -3,27 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ぶるぶる加藤先生（放置版）</title>
+    <title>加藤先生の日常</title>
     <link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'DotGothic16', sans-serif; background-color: #ffe0b2; text-align: center; user-select: none; color: #4e342e; touch-action: manipulation; }
         
-        /* ぶるぶるアニメーション */
-        @keyframes buruburu {
-            0% { transform: translate(0, 0) rotate(0deg); }
-            25% { transform: translate(-1px, 1px) rotate(-1deg); }
-            50% { transform: translate(1px, -1px) rotate(1deg); }
-            75% { transform: translate(-1px, -1px) rotate(-1deg); }
-            100% { transform: translate(0, 0) rotate(0deg); }
+        /* 触った時のブルブル */
+        @keyframes jiggle {
+            0% { transform: scale(1); }
+            25% { transform: scale(1.1) rotate(-5deg); }
+            50% { transform: scale(1.1) rotate(5deg); }
+            75% { transform: scale(1.1) rotate(-5deg); }
+            100% { transform: scale(1) rotate(0deg); }
         }
-        .shaking { animation: buruburu 0.2s infinite; display: inline-block; }
+        .jiggle-anim { animation: jiggle 0.4s ease; }
         
-        /* 寝てる時のアニメーション */
-        @keyframes sleep-breath {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
+        /* 普段のふわふわ */
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
         }
-        .sleeping { animation: sleep-breath 2s infinite !important; filter: brightness(0.8); }
+        .floating { animation: float 3s ease-in-out infinite; display: inline-block; }
+
+        /* 寝てる時 */
+        @keyframes sleep-breath {
+            0%, 100% { transform: scale(1); filter: brightness(0.9); }
+            50% { transform: scale(1.02); filter: brightness(0.8); }
+        }
+        .sleeping { animation: sleep-breath 4s infinite !important; }
 
         .container {
             max-width: 360px; margin: 10px auto; background: #fff8e1;
@@ -31,36 +38,31 @@
             box-shadow: 0 8px 0 #5d4037;
         }
 
-        /* ヘッダー情報 */
         .header { display: flex; justify-content: space-between; background: #ffcc80; padding: 5px 10px; border-radius: 10px; font-weight: bold; margin-bottom: 5px; }
         .coin-box { background: #fff; padding: 2px 8px; border-radius: 10px; border: 2px solid #ffa726; color: #ef6c00; }
 
-        /* キャラクターエリア */
         .room {
             height: 180px; background: #e0f2f1; margin: 5px 0 15px 0; border-radius: 10px;
             border: 3px solid #80cbc4; position: relative; display: flex; align-items: center; justify-content: center;
-            overflow: hidden;
+            overflow: hidden; transition: background 0.5s;
         }
-        /* 夜（寝てる時）の背景 */
         .room.night { background: #263238; border-color: #37474f; }
         
-        #character { font-size: 80px; cursor: pointer; transition: all 0.3s; }
+        #character { font-size: 80px; cursor: pointer; transition: transform 0.1s; }
+        
         .fukidashi {
             position: absolute; top: 10px; right: 10px; background: white;
             padding: 5px 10px; border-radius: 15px; font-size: 12px; border: 2px solid #ccc;
             opacity: 0.9; max-width: 120px; display: none; z-index: 10;
         }
 
-        /* パラメータバー */
         .param-row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 3px; padding: 0 5px; }
         .bar-container { width: 60px; height: 10px; background: #ddd; border-radius: 5px; overflow: hidden; display: inline-block; vertical-align: middle; }
         .bar-fill { height: 100%; transition: width 0.5s; }
-        
-        .hp-fill { background: #ef5350; } /* 体力 */
-        .food-fill { background: #ffca28; } /* 満腹 */
-        .exp-fill { background: #42a5f5; } /* 経験値 */
+        .hp-fill { background: #ef5350; } 
+        .food-fill { background: #ffca28; } 
+        .exp-fill { background: #42a5f5; }
 
-        /* ボタン類 */
         .menu-tabs { display: flex; gap: 5px; margin-bottom: 0; }
         .tab-btn { flex: 1; padding: 8px; background: #d7ccc8; border: none; border-radius: 10px 10px 0 0; cursor: pointer; font-family: inherit; font-weight: bold; color: #5d4037; }
         .tab-btn.active { background: #8d6e63; color: white; }
@@ -79,7 +81,6 @@
         .btn-icon { font-size: 24px; margin-bottom: 5px; }
         .price { font-size: 10px; color: #ef6c00; font-weight: bold; background: #fff3e0; padding: 2px 5px; border-radius: 4px; }
 
-        /* モーダル */
         .modal {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center;
@@ -87,8 +88,6 @@
         }
         .modal-content { background: #fff; color: #333; padding: 20px; border-radius: 15px; width: 85%; text-align: center; border: 4px solid #8d6e63; }
         .hidden { display: none !important; }
-        
-        /* 汚れ */
         .dirt { position: absolute; font-size: 24px; pointer-events: none; }
     </style>
 </head>
@@ -106,62 +105,43 @@
         <span>成長 <div class="bar-container"><div id="bar-exp" class="bar-fill exp-fill" style="width:0%"></div></div></span>
     </div>
 
-    <div class="room" id="room">
+    <div class="room" id="room" onclick="touchCharacter()">
         <div class="fukidashi" id="speech">...</div>
-        <div id="character" class="shaking">🥚</div>
+        <div id="character" class="floating">🥚</div>
         <div id="stain-area"></div>
     </div>
 
     <div class="menu-tabs">
-        <button class="tab-btn active" onclick="switchTab('care')">お世話</button>
-        <button class="tab-btn" onclick="switchTab('shop')">ショップ</button>
-        <button class="tab-btn" onclick="switchTab('work')">バイト</button>
+        <button id="btn-care" class="tab-btn active" onclick="switchTab('care')">お世話</button>
+        <button id="btn-shop" class="tab-btn" onclick="switchTab('shop')">ショップ</button>
+        <button id="btn-work" class="tab-btn" onclick="switchTab('work')">バイト</button>
     </div>
 
     <div class="action-area">
         <div id="tab-care" class="grid-menu">
-            <button class="action-btn" onclick="sleepToggle()">
+            <button class="action-btn" onclick="sleepToggle(); event.stopPropagation();">
                 <span class="btn-icon" id="sleep-icon">🛌</span>
                 <span id="sleep-text">寝かせる</span>
             </button>
-            <button class="action-btn" onclick="cleanRoom()">
-                <span class="btn-icon">🧹</span>
-                掃除する
+            <button class="action-btn" onclick="cleanRoom(); event.stopPropagation();">
+                <span class="btn-icon">🧹</span>掃除
             </button>
-            <button class="action-btn" onclick="pet()">
-                <span class="btn-icon">👋</span>
-                なでる
-            </button>
-            <button class="action-btn" onclick="saveAndShare()">
-                <span class="btn-icon">💾</span>
-                シェア
+            <button class="action-btn" onclick="saveAndShare(); event.stopPropagation();">
+                <span class="btn-icon">💾</span>シェア
             </button>
         </div>
 
         <div id="tab-shop" class="grid-menu hidden">
-            <button class="action-btn" onclick="buyFood('rice')">
-                <span class="btn-icon">🍙</span>給食
-                <div class="price">100P</div>
-            </button>
-            <button class="action-btn" onclick="buyFood('coffee')">
-                <span class="btn-icon">☕</span>コーヒー
-                <div class="price">300P</div>
-            </button>
-            <button class="action-btn" onclick="buyFood('sushi')">
-                <span class="btn-icon">🍣</span>特上寿司
-                <div class="price">1500P</div>
-            </button>
-            <button class="action-btn" onclick="buyFood('potion')">
-                <span class="btn-icon">🧪</span>元気薬
-                <div class="price">500P</div>
-            </button>
+            <button class="action-btn" onclick="buyFood('rice')"><span class="btn-icon">🍙</span>給食<div class="price">100P</div></button>
+            <button class="action-btn" onclick="buyFood('coffee')"><span class="btn-icon">☕</span>コーヒー<div class="price">300P</div></button>
+            <button class="action-btn" onclick="buyFood('sushi')"><span class="btn-icon">🍣</span>特上寿司<div class="price">1500P</div></button>
+            <button class="action-btn" onclick="buyFood('potion')"><span class="btn-icon">🧪</span>元気薬<div class="price">500P</div></button>
         </div>
 
         <div id="tab-work" class="hidden" style="text-align:center;">
             <p style="font-size:12px; margin-bottom:10px;">元気を消費して稼ぐ (消費:30)</p>
             <button class="action-btn" style="width:100%; background:#fff9c4;" onclick="startWork()" id="work-btn">
-                <span class="btn-icon">📝</span>
-                採点バイトをする
+                <span class="btn-icon">📝</span>採点バイト
             </button>
             <p id="work-msg" style="color:red; font-size:12px; margin-top:5px;"></p>
         </div>
@@ -186,31 +166,14 @@
 </div>
 
 <script>
-    // --- 定数 ---
     const MAX_VAL = 100;
-    const WORK_COST = 30; // バイトの消費元気
-    const GENKI_RECOVER_RATE = 1; // 寝ている間の1分あたりの回復量
-    const HUNGER_DROP_RATE = 0.5; // 1分あたりの空腹量
+    const WORK_COST = 30;
+    let state = { money: 0, genki: 100, hunger: 100, exp: 0, level: 1, poop: 0, isSleeping: false, lastLogin: Date.now() };
 
-    // --- セーブデータ管理 ---
-    let state = {
-        money: 0,
-        genki: 100,
-        hunger: 100,
-        exp: 0,
-        level: 1,
-        poop: 0,
-        isSleeping: false,
-        lastLogin: Date.now()
-    };
-
-    // ロード処理
+    // ロード
     const saved = localStorage.getItem('kato_idle_save');
-    if (saved) {
-        state = { ...state, ...JSON.parse(saved) };
-    }
+    if (saved) state = { ...state, ...JSON.parse(saved) };
 
-    // アイテムデータ
     const items = {
         'rice': { price: 100, hunger: 30, exp: 5, msg: "まあまあだな" },
         'coffee': { price: 300, hunger: 10, exp: 15, msg: "目が冴えた！" },
@@ -218,236 +181,168 @@
         'potion': { price: 500, hunger: 0, exp: 0, msg: "元気がみなぎる！", special: 'genki' }
     };
 
-    // --- ゲーム開始処理（放置計算） ---
     function init() {
         const now = Date.now();
-        const diffMin = Math.floor((now - state.lastLogin) / 60000); // 経過分数
+        const diffMin = Math.floor((now - state.lastLogin) / 60000);
         let log = "";
 
         if (diffMin > 0) {
             log += `💤 ${diffMin}分経過しました。<br>`;
-            
-            // お腹が減る処理
-            const hungerDrop = Math.floor(diffMin * HUNGER_DROP_RATE);
+            const hungerDrop = Math.floor(diffMin * 0.5);
             state.hunger = Math.max(0, state.hunger - hungerDrop);
             if(hungerDrop > 0) log += `・お腹が ${hungerDrop} 減りました<br>`;
 
-            // 元気回復（寝てたら回復、起きてても少し回復）
-            let genkiRec = 0;
-            if (state.isSleeping) {
-                genkiRec = Math.floor(diffMin * GENKI_RECOVER_RATE);
-                log += `・睡眠で元気が ${genkiRec} 回復！<br>`;
-            } else {
-                // 起きてる時は自然回復は遅い
-                genkiRec = Math.floor(diffMin * 0.1); 
-            }
+            let genkiRec = state.isSleeping ? Math.floor(diffMin * 1) : Math.floor(diffMin * 0.1);
             state.genki = Math.min(MAX_VAL, state.genki + genkiRec);
+            if(genkiRec > 0) log += `・元気が ${genkiRec} 回復！<br>`;
 
-            // うんち発生判定（時間が経ってれば）
-            if (!state.isSleeping && diffMin > 60 && Math.random() < 0.5) {
-                state.poop++;
-                log += `・うんちをしていました💩<br>`;
-            }
+            if (!state.isSleeping && diffMin > 60 && Math.random() < 0.5) state.poop++;
 
             document.getElementById('welcome-msg').innerHTML = log;
             document.getElementById('welcome-modal').style.display = 'flex';
         }
 
-        // 寝たまま終わってたら部屋を暗く
-        if (state.isSleeping) {
-            document.getElementById('room').classList.add('night');
-            document.getElementById('character').classList.remove('shaking');
-            document.getElementById('character').classList.add('sleeping');
-            document.getElementById('sleep-text').innerText = "起こす";
-        }
-
+        if (state.isSleeping) setSleepStyle(true);
         updateUI();
-        setInterval(saveData, 5000); // 5秒ごとにオートセーブ
+        setInterval(saveData, 5000);
     }
 
-    // --- メイン機能 ---
+    // --- 修正箇所：タブ切り替え機能 ---
+    function switchTab(name) {
+        ['care', 'shop', 'work'].forEach(t => document.getElementById('tab-' + t).classList.add('hidden'));
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        
+        document.getElementById('tab-' + name).classList.remove('hidden');
+        document.getElementById('btn-' + name).classList.add('active');
+    }
+
+    // --- 修正箇所：触った時のアクション ---
+    function touchCharacter() {
+        if (state.isSleeping) return;
+        const char = document.getElementById('character');
+        
+        // アニメーションクラスを付け外し
+        char.classList.remove('floating');
+        char.classList.add('jiggle-anim');
+        setTimeout(() => {
+            char.classList.remove('jiggle-anim');
+            char.classList.add('floating');
+        }, 400);
+
+        msg("やめろよw");
+    }
 
     function buyFood(id) {
-        if (state.isSleeping) { alert("寝ています！起こしてください。"); return; }
-        
+        if (state.isSleeping) { alert("寝ています"); return; }
         const item = items[id];
-        if (state.money < item.price) { alert("お金が足りません！バイトしてください。"); return; }
-        
-        // 満腹チェック
-        if (state.hunger >= 100 && id !== 'potion') { msg("お腹いっぱいです"); return; }
+        if (state.money < item.price) { alert("お金が足りません"); return; }
+        if (state.hunger >= 100 && id !== 'potion') { msg("満腹です"); return; }
 
         state.money -= item.price;
-        
-        if (id === 'potion') {
-            state.genki = Math.min(MAX_VAL, state.genki + 50);
-        } else {
+        if (id === 'potion') state.genki = Math.min(MAX_VAL, state.genki + 50);
+        else {
             state.hunger = Math.min(MAX_VAL, state.hunger + item.hunger);
             state.exp += item.exp;
         }
-
-        msg(item.msg);
-        checkEvolve();
-        updateUI();
+        msg(item.msg); checkEvolve(); updateUI();
     }
 
-    // バイトシステム（制限付き）
     let workCount = 0;
     function startWork() {
         if (state.isSleeping) { alert("寝ています"); return; }
-        if (state.genki < WORK_COST) { msg("疲れて動けません...寝かせて！"); return; }
+        if (state.genki < WORK_COST) { msg("疲れてます..."); return; }
         
-        // 元気消費
-        state.genki -= WORK_COST;
-        updateUI();
-
+        state.genki -= WORK_COST; updateUI();
         document.getElementById('work-modal').style.display = 'flex';
         workCount = 0;
         document.getElementById('work-score').innerText = 0;
         
-        // 5秒間
         setTimeout(() => {
             document.getElementById('work-modal').style.display = 'none';
-            const salary = workCount * 10; // 1タップ10円
+            const salary = workCount * 10;
             state.money += salary;
-            state.hunger = Math.max(0, state.hunger - 5); // バイトでお腹も減る
-            alert(`バイト終了！\n${salary}円 稼ぎました。`);
+            state.hunger = Math.max(0, state.hunger - 5);
+            alert(`${salary}円 稼ぎました！`);
             updateUI();
         }, 5000);
     }
+    function doWorkTap() { workCount++; document.getElementById('work-score').innerText = workCount; }
 
-    function doWorkTap() {
-        workCount++;
-        document.getElementById('work-score').innerText = workCount;
-    }
-
-    // 睡眠システム
     function sleepToggle() {
         state.isSleeping = !state.isSleeping;
+        setSleepStyle(state.isSleeping);
+        saveData();
+    }
+
+    function setSleepStyle(isSleep) {
         const room = document.getElementById('room');
         const char = document.getElementById('character');
         const btnText = document.getElementById('sleep-text');
-
-        if (state.isSleeping) {
+        
+        if (isSleep) {
             room.classList.add('night');
-            char.classList.remove('shaking');
+            char.classList.remove('floating');
             char.classList.add('sleeping');
             btnText.innerText = "起こす";
             msg("おやすみ...");
         } else {
             room.classList.remove('night');
             char.classList.remove('sleeping');
-            char.classList.add('shaking');
+            char.classList.add('floating');
             btnText.innerText = "寝かせる";
             msg("おはよう！");
         }
-        saveData(); // 状態が変わったら即保存
     }
 
-    // 掃除
     function cleanRoom() {
-        if (state.poop > 0) {
-            state.poop = 0;
-            state.exp += 2; // 掃除でも少し経験値
-            msg("スッキリした！");
-            updateUI();
-        } else {
-            msg("汚れてないよ");
-        }
-    }
-    
-    function pet() {
-        if (state.isSleeping) return;
-        msg("やめろよw");
+        if (state.poop > 0) { state.poop = 0; state.exp += 2; msg("スッキリ！"); updateUI(); }
+        else msg("きれいだよ");
     }
 
-    // 進化ロジック
     function checkEvolve() {
-        // 経験値テーブル
-        if (state.exp > 100 && state.level === 1) { state.level = 2; alert("加藤先生が進化しました！(卵卒業)"); }
-        else if (state.exp > 500 && state.level === 2) { state.level = 3; alert("加藤先生が進化しました！(新任)"); }
-        else if (state.exp > 2000 && state.level === 3) { state.level = 4; alert("加藤先生が進化しました！(ベテラン)"); }
-        else if (state.exp > 5000 && state.level === 4) { state.level = 5; alert("加藤先生が進化しました！(伝説)"); }
+        if (state.exp > 100 && state.level === 1) { state.level = 2; alert("進化！(卵卒業)"); }
+        else if (state.exp > 500 && state.level === 2) { state.level = 3; alert("進化！(新任)"); }
+        else if (state.exp > 2000 && state.level === 3) { state.level = 4; alert("進化！(ベテラン)"); }
+        else if (state.exp > 5000 && state.level === 4) { state.level = 5; alert("進化！(伝説)"); }
     }
 
-    function getCharStr() {
-        if (state.level === 1) return "🥚";
-        if (state.level === 2) return "🐣";
-        if (state.level === 3) return "👨‍🏫"; // 新任
-        if (state.level === 4) return "👓"; // ベテラン
-        if (state.level === 5) return "🧞‍♂️"; // 魔人
-        return "👻";
-    }
-
-    function getRankStr() {
-        const ranks = ["卵", "幼少期", "新任", "ベテラン", "伝説"];
-        return ranks[state.level - 1] || "??";
-    }
-
-    // --- ユーティリティ ---
     function updateUI() {
         document.getElementById('money').innerText = state.money;
-        document.getElementById('character').innerText = getCharStr();
-        document.getElementById('rank-display').innerText = getRankStr();
+        const chars = ["🥚", "🐣", "👨‍🏫", "👓", "🧞‍♂️", "👻"];
+        const ranks = ["卵", "幼少期", "新任", "ベテラン", "伝説", "霊"];
+        document.getElementById('character').innerText = chars[state.level - 1] || "??";
+        document.getElementById('rank-display').innerText = ranks[state.level - 1] || "??";
 
-        // バーの長さ更新
         document.getElementById('bar-genki').style.width = state.genki + "%";
         document.getElementById('bar-food').style.width = state.hunger + "%";
-        // 経験値バーは次のレベルまでの割合(簡易)
-        let nextExp = 100;
-        if(state.level===2) nextExp=500;
-        if(state.level===3) nextExp=2000;
+        
+        let nextExp = [100, 500, 2000, 5000, 99999][state.level - 1] || 100;
         let expRate = Math.min(100, (state.exp / nextExp) * 100);
         document.getElementById('bar-exp').style.width = expRate + "%";
 
-        // うんち描画
         const stainArea = document.getElementById('stain-area');
         stainArea.innerHTML = "";
         for(let i=0; i<state.poop; i++){
-            let d = document.createElement('div');
-            d.className = 'dirt';
-            d.innerText = '💩';
-            d.style.top = Math.random()*80 + "%";
-            d.style.left = Math.random()*80 + "%";
+            let d = document.createElement('div'); d.className = 'dirt'; d.innerText = '💩';
+            d.style.top = Math.random()*80 + "%"; d.style.left = Math.random()*80 + "%";
             stainArea.appendChild(d);
         }
 
-        // バイトボタン制御
         const workBtn = document.getElementById('work-btn');
         const workMsg = document.getElementById('work-msg');
-        if (state.genki < WORK_COST) {
-            workBtn.disabled = true;
-            workMsg.innerText = "元気が足りません。寝かせて回復してください。";
-        } else {
-            workBtn.disabled = false;
-            workMsg.innerText = "";
-        }
+        if (state.genki < WORK_COST) { workBtn.disabled = true; workMsg.innerText = "元気不足（寝かせて回復）"; }
+        else { workBtn.disabled = false; workMsg.innerText = ""; }
     }
 
     function msg(text) {
-        const b = document.getElementById('speech');
-        b.innerText = text;
-        b.style.display = 'block';
+        const b = document.getElementById('speech'); b.innerText = text; b.style.display = 'block';
         setTimeout(() => b.style.display = 'none', 3000);
     }
+    function saveData() { state.lastLogin = Date.now(); localStorage.setItem('kato_idle_save', JSON.stringify(state)); }
+    function closeWelcome() { document.getElementById('welcome-modal').style.display = 'none'; }
+    function saveAndShare() { saveData(); navigator.clipboard.writeText(window.location.href).then(() => alert("URLをコピーしました！")); }
 
-    function saveData() {
-        state.lastLogin = Date.now();
-        localStorage.setItem('kato_idle_save', JSON.stringify(state));
-    }
-    
-    function closeWelcome() {
-        document.getElementById('welcome-modal').style.display = 'none';
-    }
-
-    function saveAndShare() {
-        saveData();
-        const url = window.location.href;
-        navigator.clipboard.writeText(url).then(() => alert("セーブしました！URLをコピーしたのでいつでも続きから遊べます。"));
-    }
-
-    // 初回起動
     init();
-
 </script>
 </body>
 </html>
